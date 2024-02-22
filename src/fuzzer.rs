@@ -1,16 +1,22 @@
-use std::{env, io, path::PathBuf, process};
+use serde_json::json;
+use std::{
+    env,
+    io::{self, stdout},
+    path::PathBuf,
+    process,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use clap::Parser;
 use libafl::{
-    corpus::{Corpus, InMemoryOnDiskCorpus, NopCorpus},
+    corpus::{Corpus, InMemoryOnDiskCorpus},
     events::{EventRestarter, SimpleRestartingEventManager},
     executors::ExitKind,
-    feedbacks::MaxMapFeedback,
+    feedbacks::{CrashFeedback, MaxMapFeedback},
     fuzzer::StdFuzzer,
     inputs::{BytesInput, HasTargetBytes},
-    monitors::SimpleMonitor,
     mutators::scheduled::{havoc_mutations, StdScheduledMutator},
-    observers::{ConstMapObserver, HitcountsMapObserver},
+    observers::StdMapObserver,
     schedulers::QueueScheduler,
     stages::mutational::StdMutationalStage,
     state::{HasCorpus, StdState},
@@ -31,7 +37,10 @@ use libafl_qemu::{
     ArchExtras, CallingConvention, GuestAddr, GuestReg, MmapPerms, QemuForkExecutor, QemuHooks,
     Regs,
 };
+use std::fs::File;
+use std::io::Write;
 
+use crate::json_monitor::JsonMonitor;
 
 #[derive(Parser, Debug)]
 pub struct FuzzerOptions {
@@ -40,6 +49,15 @@ pub struct FuzzerOptions {
 
     #[arg(long, help = "Input directory")]
     input: String,
+
+    #[arg(long, help = "Solution directory")]
+    solution: String,
+
+    #[arg(long, help = "Bitmap path")]
+    bitmap: String,
+
+    #[arg(long, help = "Events output directory")]
+    events: String,
 
     #[arg(long, help = "Timeout in seconds", default_value_t = 1_u64)]
     timeout: u64,
@@ -80,6 +98,7 @@ pub fn fuzz() -> Result<(), Error> {
     env::remove_var("LD_LIBRARY_PATH");
     let env: Vec<(String, String)> = env::vars().collect();
     let emu = Emulator::new(&options.args, &env).unwrap();
+    println!("Base address: {:#x}", emu.load_addr());
 
     let mut elf_buffer = Vec::new();
     let elf = EasyElf::from_file(emu.binary_path(), &mut elf_buffer).unwrap();
@@ -107,46 +126,55 @@ pub fn fuzz() -> Result<(), Error> {
 
     let mut shmem_provider = StdShMemProvider::new().expect("Failed to init shared memory");
 
-    let monitor = SimpleMonitor::with_user_monitor(
-        |s| {
-            println!("{s}");
-        },
-        true,
-    );
-    let (state, mut mgr) = match SimpleRestartingEventManager::launch(monitor, &mut shmem_provider)
-    {
-        Ok(res) => res,
-        Err(err) => match err {
-            Error::ShuttingDown => {
-                return Ok(());
-            }
-            _ => {
-                panic!("Failed to setup the restarter: {err}");
-            }
-        },
-    };
-
     let mut edges_shmem = shmem_provider.new_shmem(EDGES_MAP_SIZE).unwrap();
+    let edges_shmem_clone = edges_shmem.clone();
     let edges = edges_shmem.as_mut_slice();
     unsafe { EDGES_MAP_PTR = edges.as_mut_ptr() };
 
-    let edges_observer = unsafe {
-        HitcountsMapObserver::new(ConstMapObserver::<_, EDGES_MAP_SIZE>::from_mut_ptr(
-            "edges",
-            edges.as_mut_ptr(),
-        ))
-    };
+    let edges_observer = unsafe { StdMapObserver::new("edges", edges) };
+
+    let json_monitor = JsonMonitor::new(|event| {
+        let epoch_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        let filename = format!("{}/{}", options.events, epoch_time.as_nanos());
+
+        let mut file = File::create(filename).unwrap();
+        serde_json::to_writer(&file, event).unwrap();
+        file.flush().unwrap();
+
+        serde_json::to_writer(stdout(), event).unwrap();
+        stdout().flush().unwrap();
+
+        // Just shove the hitcount map out here
+        let mut bitmap_file =
+            File::create(PathBuf::from(&options.bitmap)).expect("Failed to create bitmap file");
+        bitmap_file
+            .write_all(&edges_shmem_clone.as_slice())
+            .expect("Failed to write bitmap data to file");
+        bitmap_file.flush().expect("Failed to flush bitmap file");
+    });
+
+    let (state, mut mgr) =
+        match SimpleRestartingEventManager::launch(json_monitor, &mut shmem_provider) {
+            Ok(res) => res,
+            Err(err) => match err {
+                Error::ShuttingDown => {
+                    return Ok(());
+                }
+                _ => {
+                    panic!("Failed to setup the restarter: {err}");
+                }
+            },
+        };
 
     let mut feedback = MaxMapFeedback::tracking(&edges_observer, true, false);
 
-    #[allow(clippy::let_unit_value)]
-    let mut objective = ();
+    let mut objective = CrashFeedback::new();
 
     let mut state = state.unwrap_or_else(|| {
         StdState::new(
             StdRand::with_seed(current_nanos()),
             InMemoryOnDiskCorpus::new(PathBuf::from(options.output)).unwrap(),
-            NopCorpus::new(),
+            InMemoryOnDiskCorpus::new(PathBuf::from(options.solution)).unwrap(),
             &mut feedback,
             &mut objective,
         )
@@ -175,7 +203,7 @@ pub fn fuzz() -> Result<(), Error> {
                 .unwrap();
             emu.write_function_argument(CallingConvention::Cdecl, 1, len)
                 .unwrap();
-            emu.run();
+            let _ = emu.run();
         }
 
         ExitKind::Ok
@@ -211,7 +239,9 @@ pub fn fuzz() -> Result<(), Error> {
     let mutator = StdScheduledMutator::new(havoc_mutations());
     let mut stages = tuple_list!(StdMutationalStage::new(mutator));
 
-    fuzzer.fuzz_loop(&mut stages, &mut executor, &mut state, &mut mgr).expect("Error in the fuzzing loop!");
+    fuzzer
+        .fuzz_loop(&mut stages, &mut executor, &mut state, &mut mgr)
+        .expect("Error in the fuzzing loop!");
     println!("Fuzzing done, exiting...");
 
     mgr.send_exiting()?;

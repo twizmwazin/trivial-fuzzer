@@ -1,5 +1,8 @@
 /target
 inputs
 outputs
+solutions
 test.bin
-
+.DS_Store
+a.out
+*.bitmap

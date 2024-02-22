@@ -10,4 +10,11 @@ clap = { version = "4.4.18", features = ["derive", "string"] }
 libafl = "0.11.2"
 libafl_bolts = "0.11.2"
 libafl_qemu = { version = "0.11.2", features = ["usermode", "aarch64"] }
+libc = "0.2.153"
 log = "0.4.20"
+serde = { version = "1.0.196", features = ["derive"] }
+serde_json = "1.0.113"
+
+
+[profile.release]
+strip = true
