@@ -9,11 +9,51 @@ edition = "2021"
 clap = { version = "4.4.18", features = ["derive", "string"] }
 libafl = "0.11.2"
 libafl_bolts = "0.11.2"
-libafl_qemu = { version = "0.11.2", features = ["usermode", "aarch64"] }
+libafl_qemu = { version = "0.11.2", features = ["usermode"] }
 libc = "0.2.153"
 log = "0.4.20"
 serde = { version = "1.0.196", features = ["derive"] }
 serde_json = "1.0.113"
+
+[[bin]]
+name = "trivial-fuzzer-aarch64"
+path = "src/main.rs"
+required-features = ["libafl_qemu/aarch64"]
+
+[[bin]]
+name = "trivial-fuzzer-armeb"
+path = "src/main.rs"
+required-features = ["libafl_qemu/arm", "libafl_qemu/be"]
+
+[[bin]]
+name = "trivial-fuzzer-arm"
+path = "src/main.rs"
+required-features = ["libafl_qemu/arm"]
+
+[[bin]]
+name = "trivial-fuzzer-i386"
+path = "src/main.rs"
+required-features = ["libafl_qemu/i386"]
+
+[[bin]]
+name = "trivial-fuzzer-mips"
+path = "src/main.rs"
+required-features = ["libafl_qemu/mips", "libafl_qemu/be"]
+
+[[bin]]
+name = "trivial-fuzzer-mipsel"
+path = "src/main.rs"
+required-features = ["libafl_qemu/mips"]
+
+[[bin]]
+name = "trivial-fuzzer-ppc"
+path = "src/main.rs"
+required-features = ["libafl_qemu/ppc"]
+
+[[bin]]
+name = "trivial-fuzzer-x86_64"
+path = "src/main.rs"
+required-features = ["libafl_qemu/x86_64"]
 
 
 [profile.release]

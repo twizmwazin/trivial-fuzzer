@@ -1,0 +1,90 @@
+# Debug profiles
+[tasks.aarch64]
+command = "cargo"
+args = ["build", "--bin=trivial-fuzzer-aarch64", "--features=libafl_qemu/aarch64"]
+
+[tasks.armeb]
+command = "cargo"
+args = ["build", "--bin=trivial-fuzzer-armeb", "--features=libafl_qemu/arm,libafl_qemu/be"]
+
+[tasks.arm]
+command = "cargo"
+args = ["build", "--bin=trivial-fuzzer-arm", "--features=libafl_qemu/arm"]
+
+[tasks.i386]
+command = "cargo"
+args = ["build", "--bin=trivial-fuzzer-i386", "--features=libafl_qemu/i386"]
+
+[tasks.mips]
+command = "cargo"
+args = ["build", "--bin=trivial-fuzzer-mips", "--features=libafl_qemu/mips,libafl_qemu/be"]
+
+[tasks.mipsel]
+command = "cargo"
+args = ["build", "--bin=trivial-fuzzer-mipsel", "--features=libafl_qemu/mips"]
+
+[tasks.ppc]
+command = "cargo"
+args = ["build", "--bin=trivial-fuzzer-ppc", "--features=libafl_qemu/ppc"]
+
+[tasks.x86_64]
+command = "cargo"
+args = ["build", "--bin=trivial-fuzzer-x86_64", "--features=libafl_qemu/x86_64"]
+
+[tasks.all]
+dependencies = [
+    "aarch64",
+    "armeb",
+    "arm",
+    "i386",
+    "mips",
+    "mipsel",
+    "ppc",
+    "x86_64"
+]
+
+
+# Release profiles
+[tasks.aarch64-release]
+command = "cargo"
+args = ["build", "--release", "--bin=trivial-fuzzer-aarch64", "--features=libafl_qemu/aarch64"]
+
+[tasks.armeb-release]
+command = "cargo"
+args = ["build", "--release", "--bin=trivial-fuzzer-armeb", "--features=libafl_qemu/arm,libafl_qemu/be"]
+
+[tasks.arm-release]
+command = "cargo"
+args = ["build", "--release", "--bin=trivial-fuzzer-arm", "--features=libafl_qemu/arm"]
+
+[tasks.i386-release]
+command = "cargo"
+args = ["build", "--release", "--bin=trivial-fuzzer-i386", "--features=libafl_qemu/i386"]
+
+[tasks.mips-release]
+command = "cargo"
+args = ["build", "--release", "--bin=trivial-fuzzer-mips", "--features=libafl_qemu/mips,libafl_qemu/be"]
+
+[tasks.mipsel-release]
+command = "cargo"
+args = ["build", "--release", "--bin=trivial-fuzzer-mipsel", "--features=libafl_qemu/mips"]
+
+[tasks.ppc-release]
+command = "cargo"
+args = ["build", "--release", "--bin=trivial-fuzzer-ppc", "--features=libafl_qemu/ppc"]
+
+[tasks.x86_64-release]
+command = "cargo"
+args = ["build", "--release", "--bin=trivial-fuzzer-x86_64", "--features=libafl_qemu/x86_64"]
+
+[tasks.release]
+dependencies = [
+    "aarch64-release",
+    "armeb-release",
+    "arm-release",
+    "i386-release",
+    "mips-release",
+    "mipsel-release",
+    "ppc-release",
+    "x86_64-release"
+]
