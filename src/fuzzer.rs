@@ -1,4 +1,3 @@
-use serde_json::json;
 use std::{
     env,
     io::{self, stdout},
