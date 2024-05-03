@@ -29,8 +29,12 @@ jobs:
       # Build
       - name: Build x86_64
         run: cargo make release-x86_64
+        env:
+          CROSS_NO_WARNINGS: 0
       - name: Build aarch64
         run: cargo make release-aarch64
+        env:
+          CROSS_NO_WARNINGS: 0
 
       # Upload result
       - name: Upload artifact
