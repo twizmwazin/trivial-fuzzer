@@ -1,0 +1,28 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+
+jobs:
+  release:
+    name: Build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install cargo-make
+        uses: davidB/rust-cargo-make@v1
+      - name: Build x86_64
+        run: cargo make release-x86_64
+      - name: Build aarch64
+        run: cargo make release-aarch64
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: target/trivial-fuzzer-*.tar.gz
+          compression-level: 0

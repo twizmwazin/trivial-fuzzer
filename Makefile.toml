@@ -1,11 +1,19 @@
 # Debug profiles
 [tasks.aarch64]
 command = "cargo"
-args = ["build", "--bin=trivial-fuzzer-aarch64", "--features=libafl_qemu/aarch64"]
+args = [
+    "build",
+    "--bin=trivial-fuzzer-aarch64",
+    "--features=libafl_qemu/aarch64",
+]
 
 [tasks.armeb]
 command = "cargo"
-args = ["build", "--bin=trivial-fuzzer-armeb", "--features=libafl_qemu/arm,libafl_qemu/be"]
+args = [
+    "build",
+    "--bin=trivial-fuzzer-armeb",
+    "--features=libafl_qemu/arm,libafl_qemu/be",
+]
 
 [tasks.arm]
 command = "cargo"
@@ -17,7 +25,11 @@ args = ["build", "--bin=trivial-fuzzer-i386", "--features=libafl_qemu/i386"]
 
 [tasks.mips]
 command = "cargo"
-args = ["build", "--bin=trivial-fuzzer-mips", "--features=libafl_qemu/mips,libafl_qemu/be"]
+args = [
+    "build",
+    "--bin=trivial-fuzzer-mips",
+    "--features=libafl_qemu/mips,libafl_qemu/be",
+]
 
 [tasks.mipsel]
 command = "cargo"
@@ -40,42 +52,82 @@ dependencies = [
     "mips",
     "mipsel",
     "ppc",
-    "x86_64"
+    "x86_64",
 ]
 
 
 # Release profiles
 [tasks.aarch64-release]
 command = "cargo"
-args = ["build", "--release", "--bin=trivial-fuzzer-aarch64", "--features=libafl_qemu/aarch64"]
+args = [
+    "build",
+    "--release",
+    "--bin=trivial-fuzzer-aarch64",
+    "--features=libafl_qemu/aarch64",
+]
 
 [tasks.armeb-release]
 command = "cargo"
-args = ["build", "--release", "--bin=trivial-fuzzer-armeb", "--features=libafl_qemu/arm,libafl_qemu/be"]
+args = [
+    "build",
+    "--release",
+    "--bin=trivial-fuzzer-armeb",
+    "--features=libafl_qemu/arm,libafl_qemu/be",
+]
 
 [tasks.arm-release]
 command = "cargo"
-args = ["build", "--release", "--bin=trivial-fuzzer-arm", "--features=libafl_qemu/arm"]
+args = [
+    "build",
+    "--release",
+    "--bin=trivial-fuzzer-arm",
+    "--features=libafl_qemu/arm",
+]
 
 [tasks.i386-release]
 command = "cargo"
-args = ["build", "--release", "--bin=trivial-fuzzer-i386", "--features=libafl_qemu/i386"]
+args = [
+    "build",
+    "--release",
+    "--bin=trivial-fuzzer-i386",
+    "--features=libafl_qemu/i386",
+]
 
 [tasks.mips-release]
 command = "cargo"
-args = ["build", "--release", "--bin=trivial-fuzzer-mips", "--features=libafl_qemu/mips,libafl_qemu/be"]
+args = [
+    "build",
+    "--release",
+    "--bin=trivial-fuzzer-mips",
+    "--features=libafl_qemu/mips,libafl_qemu/be",
+]
 
 [tasks.mipsel-release]
 command = "cargo"
-args = ["build", "--release", "--bin=trivial-fuzzer-mipsel", "--features=libafl_qemu/mips"]
+args = [
+    "build",
+    "--release",
+    "--bin=trivial-fuzzer-mipsel",
+    "--features=libafl_qemu/mips",
+]
 
 [tasks.ppc-release]
 command = "cargo"
-args = ["build", "--release", "--bin=trivial-fuzzer-ppc", "--features=libafl_qemu/ppc"]
+args = [
+    "build",
+    "--release",
+    "--bin=trivial-fuzzer-ppc",
+    "--features=libafl_qemu/ppc",
+]
 
 [tasks.x86_64-release]
 command = "cargo"
-args = ["build", "--release", "--bin=trivial-fuzzer-x86_64", "--features=libafl_qemu/x86_64"]
+args = [
+    "build",
+    "--release",
+    "--bin=trivial-fuzzer-x86_64",
+    "--features=libafl_qemu/x86_64",
+]
 
 [tasks.release]
 dependencies = [
@@ -86,5 +138,220 @@ dependencies = [
     "mips-release",
     "mipsel-release",
     "ppc-release",
-    "x86_64-release"
+    "x86_64-release",
+]
+
+# Release profiles (x86_64)
+[tasks.aarch64-release-x86_64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "x86_64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-aarch64",
+    "--features=libafl_qemu/aarch64",
+]
+
+[tasks.armeb-release-x86_64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "x86_64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-armeb",
+    "--features=libafl_qemu/arm,libafl_qemu/be",
+]
+
+[tasks.arm-release-x86_64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "x86_64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-arm",
+    "--features=libafl_qemu/arm",
+]
+
+[tasks.i386-release-x86_64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "x86_64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-i386",
+    "--features=libafl_qemu/i386",
+]
+
+[tasks.mips-release-x86_64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "x86_64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-mips",
+    "--features=libafl_qemu/mips,libafl_qemu/be",
+]
+
+[tasks.mipsel-release-x86_64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "x86_64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-mipsel",
+    "--features=libafl_qemu/mips",
+]
+
+[tasks.ppc-release-x86_64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "x86_64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-ppc",
+    "--features=libafl_qemu/ppc",
+]
+
+[tasks.x86_64-release-x86_64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "x86_64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-x86_64",
+    "--features=libafl_qemu/x86_64",
+]
+
+[tasks.release-x86_64]
+dependencies = [
+    "aarch64-release-x86_64",
+    "armeb-release-x86_64",
+    "arm-release-x86_64",
+    "i386-release-x86_64",
+    "mips-release-x86_64",
+    "mipsel-release-x86_64",
+    "ppc-release-x86_64",
+    "x86_64-release-x86_64",
+]
+command = "tar"
+args = [
+    "-czvf",
+    "trivial-fuzzer-x86_64.tar.gz",
+    "target/x86_64-unknown-linux-gnu/release/",
+]
+
+
+# Release profiles (aarch64)
+[tasks.aarch64-release-aarch64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "aarch64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-aarch64",
+    "--features=libafl_qemu/aarch64",
+]
+
+[tasks.armeb-release-aarch64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "aarch64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-armeb",
+    "--features=libafl_qemu/arm,libafl_qemu/be",
+]
+
+[tasks.arm-release-aarch64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "aarch64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-arm",
+    "--features=libafl_qemu/arm",
+]
+
+[tasks.i386-release-aarch64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "aarch64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-i386",
+    "--features=libafl_qemu/i386",
+]
+
+[tasks.mips-release-aarch64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "aarch64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-mips",
+    "--features=libafl_qemu/mips,libafl_qemu/be",
+]
+
+[tasks.mipsel-release-aarch64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "aarch64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-mipsel",
+    "--features=libafl_qemu/mips",
+]
+
+[tasks.ppc-release-aarch64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "aarch64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-ppc",
+    "--features=libafl_qemu/ppc",
+]
+
+[tasks.x86_64-release-aarch64]
+command = "cross"
+args = [
+    "build",
+    "--target",
+    "aarch64-unknown-linux-gnu",
+    "--release",
+    "--bin=trivial-fuzzer-x86_64",
+    "--features=libafl_qemu/x86_64",
+]
+
+[tasks.release-aarch64]
+dependencies = [
+    "aarch64-release-aarch64",
+    "armeb-release-aarch64",
+    "arm-release-aarch64",
+    "i386-release-aarch64",
+    "mips-release-aarch64",
+    "mipsel-release-aarch64",
+    "ppc-release-aarch64",
+    "x86_64-release-aarch64",
+]
+command = "tar"
+args = [
+    "-czvf",
+    "target/trivial-fuzzer-aarch64.tar.gz",
+    "target/aarch64-unknown-linux-gnu/release/",
 ]
