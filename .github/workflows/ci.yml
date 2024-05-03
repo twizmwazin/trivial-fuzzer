@@ -12,6 +12,14 @@ jobs:
     name: Build
     runs-on: ubuntu-22.04
     steps:
+      - name: Install cargo-make
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-make
+      - name: Install cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install cargo-make
