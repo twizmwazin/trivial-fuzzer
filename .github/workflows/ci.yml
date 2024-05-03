@@ -20,9 +20,7 @@ jobs:
         with:
           tool: cargo-make
       - name: Install cross
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
 
       # Get the code
       - name: Checkout code
