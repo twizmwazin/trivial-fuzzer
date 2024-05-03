@@ -12,6 +12,9 @@ jobs:
     name: Build
     runs-on: ubuntu-22.04
     steps:
+      # Setup build dependencies
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
       - name: Install cargo-make
         uses: taiki-e/install-action@v2
         with:
@@ -20,14 +23,18 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cross
+
+      # Get the code
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install cargo-make
-        uses: davidB/rust-cargo-make@v1
+      
+      # Build
       - name: Build x86_64
         run: cargo make release-x86_64
       - name: Build aarch64
         run: cargo make release-aarch64
+
+      # Upload result
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
