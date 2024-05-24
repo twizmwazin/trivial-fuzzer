@@ -62,9 +62,9 @@ where
         self.start_time = time;
     }
 
-    fn display(&mut self, event_msg: String, sender_id: ClientId) {
+    fn display(&mut self, event_msg: &str, sender_id: ClientId) {
         let output = JsonMonitorOutput {
-            event_msg,
+            event_msg: event_msg.into(),
             sender_id,
             duration: (current_time() - self.start_time).as_millis(),
             clients: self.client_stats().len(),

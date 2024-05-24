@@ -3,12 +3,12 @@ use std::{
     io::{self, stdout},
     path::PathBuf,
     process,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use clap::Parser;
 use libafl::{
-    corpus::{Corpus, InMemoryOnDiskCorpus},
+    corpus::{Corpus, InMemoryOnDiskCorpus, Testcase},
     events::{EventRestarter, SimpleRestartingEventManager},
     executors::ExitKind,
     feedbacks::{CrashFeedback, MaxMapFeedback},
@@ -27,14 +27,10 @@ use libafl_bolts::{
     rands::StdRand,
     shmem::{ShMemProvider, StdShMemProvider},
     tuples::tuple_list,
-    AsMutSlice, AsSlice,
+    AsSliceMut, AsSlice,
 };
 use libafl_qemu::{
-    edges::{QemuEdgeCoverageChildHelper, EDGES_MAP_PTR, EDGES_MAP_SIZE},
-    elf::EasyElf,
-    emu::Emulator,
-    ArchExtras, CallingConvention, GuestAddr, GuestReg, MmapPerms, QemuForkExecutor, QemuHooks,
-    Regs,
+    edges::{QemuEdgeCoverageChildHelper, EDGES_MAP_PTR, EDGES_MAP_SIZE_IN_USE}, elf::EasyElf, ArchExtras, CallingConvention, GuestAddr, GuestReg, MmapPerms, Qemu, QemuForkExecutor, QemuHooks, Regs
 };
 use std::fs::File;
 use std::io::Write;
@@ -96,7 +92,7 @@ pub fn fuzz() -> Result<(), Error> {
 
     env::remove_var("LD_LIBRARY_PATH");
     let env: Vec<(String, String)> = env::vars().collect();
-    let emu = Emulator::new(&options.args, &env).unwrap();
+    let emu = Qemu::init(&options.args, &env).unwrap();
     println!("Base address: {:#x}", emu.load_addr());
 
     let mut elf_buffer = Vec::new();
@@ -125,9 +121,9 @@ pub fn fuzz() -> Result<(), Error> {
 
     let mut shmem_provider = StdShMemProvider::new().expect("Failed to init shared memory");
 
-    let mut edges_shmem = shmem_provider.new_shmem(EDGES_MAP_SIZE).unwrap();
+    let mut edges_shmem = shmem_provider.new_shmem(EDGES_MAP_SIZE_IN_USE).unwrap();
     let edges_shmem_clone = edges_shmem.clone();
-    let edges = edges_shmem.as_mut_slice();
+    let edges = edges_shmem.as_slice_mut();
     unsafe { EDGES_MAP_PTR = edges.as_mut_ptr() };
 
     let edges_observer = unsafe { StdMapObserver::new("edges", edges) };
@@ -141,6 +137,7 @@ pub fn fuzz() -> Result<(), Error> {
         file.flush().unwrap();
 
         serde_json::to_writer(stdout(), event).unwrap();
+        println!("");
         stdout().flush().unwrap();
 
         // Just shove the hitcount map out here
@@ -165,7 +162,7 @@ pub fn fuzz() -> Result<(), Error> {
             },
         };
 
-    let mut feedback = MaxMapFeedback::tracking(&edges_observer, true, false);
+    let mut feedback = MaxMapFeedback::new(&edges_observer);
 
     let mut objective = CrashFeedback::new();
 
@@ -221,18 +218,22 @@ pub fn fuzz() -> Result<(), Error> {
         &mut state,
         &mut mgr,
         shmem_provider,
+        Duration::from_secs(10),
     )?;
 
     println!("Importing {} seeds...", files.len());
 
     if state.must_load_initial_inputs() {
         state
-            .load_initial_inputs(&mut fuzzer, &mut executor, &mut mgr, &files)
+            .load_initial_inputs_by_filenames_forced(&mut fuzzer, &mut executor, &mut mgr, &files)
             .unwrap_or_else(|_| {
                 println!("Failed to load initial corpus");
                 process::exit(0);
             });
         println!("Imported {} seeds from disk.", state.corpus().count());
+        if state.corpus().count() == 0 {
+            state.corpus_mut().add(Testcase::new(BytesInput::new(Vec::new()))).unwrap();
+        }
     }
 
     let mutator = StdScheduledMutator::new(havoc_mutations());
