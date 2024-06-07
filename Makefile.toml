@@ -88,3 +88,7 @@ dependencies = [
     "ppc-release",
     "x86_64-release"
 ]
+
+[tasks.test-aarch64]
+command = "cargo"
+args = ["test", "--features", "libafl_qemu/aarch64"]

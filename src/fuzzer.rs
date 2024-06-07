@@ -9,7 +9,7 @@ use std::{
 use clap::Parser;
 use libafl::{
     corpus::{Corpus, InMemoryOnDiskCorpus, Testcase},
-    events::{EventRestarter, SimpleRestartingEventManager},
+    events::{EventRestarter, SimpleEventManager, SimpleRestartingEventManager},
     executors::ExitKind,
     feedbacks::{CrashFeedback, MaxMapFeedback},
     fuzzer::StdFuzzer,
@@ -27,10 +27,13 @@ use libafl_bolts::{
     rands::StdRand,
     shmem::{ShMemProvider, StdShMemProvider},
     tuples::tuple_list,
-    AsSliceMut, AsSlice,
+    AsSlice, AsSliceMut,
 };
 use libafl_qemu::{
-    edges::{QemuEdgeCoverageChildHelper, EDGES_MAP_PTR, EDGES_MAP_SIZE_IN_USE}, elf::EasyElf, ArchExtras, CallingConvention, GuestAddr, GuestReg, MmapPerms, Qemu, QemuForkExecutor, QemuHooks, Regs
+    edges::{QemuEdgeCoverageChildHelper, EDGES_MAP_PTR, EDGES_MAP_SIZE_IN_USE},
+    elf::EasyElf,
+    ArchExtras, CallingConvention, GuestAddr, GuestReg, MmapPerms, Qemu, QemuForkExecutor,
+    QemuHooks, Regs,
 };
 use std::fs::File;
 use std::io::Write;
@@ -72,16 +75,34 @@ pub struct FuzzerOptions {
 
 pub const MAX_INPUT_SIZE: usize = 1048576; // 1MB
 
-pub fn fuzz() -> Result<(), Error> {
-    let mut options = FuzzerOptions::parse();
+fn create_directory_structure(options: &FuzzerOptions) {
+    let dirs = vec![
+        &options.output,
+        &options.input,
+        &options.solution,
+        &options.events,
+    ];
+
+    for dir in dirs {
+        if !PathBuf::from(dir).exists() {
+            std::fs::create_dir_all(dir).expect("Failed to create directory");
+        }
+    }
+}
+
+pub fn fuzz(mut options: FuzzerOptions, limit_loops: Option<u32>) -> Result<(), Error> {
+    create_directory_structure(&options);
 
     let corpus_dir = PathBuf::from(options.input);
 
     let files = corpus_dir
         .read_dir()
-        .expect("Failed to read corpus dir")
-        .map(|x| Ok(x?.path()))
-        .collect::<Result<Vec<PathBuf>, io::Error>>()
+        .map(|read_dir| {
+            read_dir
+                .map(|entry| entry.map(|e| e.path()))
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .unwrap_or_else(|_| Ok(Vec::new()))
         .expect("Failed to read dir entry");
 
     let program = env::args().next().unwrap();
@@ -149,33 +170,20 @@ pub fn fuzz() -> Result<(), Error> {
         bitmap_file.flush().expect("Failed to flush bitmap file");
     });
 
-    let (state, mut mgr) =
-        match SimpleRestartingEventManager::launch(json_monitor, &mut shmem_provider) {
-            Ok(res) => res,
-            Err(err) => match err {
-                Error::ShuttingDown => {
-                    return Ok(());
-                }
-                _ => {
-                    panic!("Failed to setup the restarter: {err}");
-                }
-            },
-        };
+    let mut mgr = SimpleEventManager::new(json_monitor);
 
     let mut feedback = MaxMapFeedback::new(&edges_observer);
 
     let mut objective = CrashFeedback::new();
 
-    let mut state = state.unwrap_or_else(|| {
-        StdState::new(
+    let mut state = StdState::new(
             StdRand::with_seed(current_nanos()),
             InMemoryOnDiskCorpus::new(PathBuf::from(options.output)).unwrap(),
             InMemoryOnDiskCorpus::new(PathBuf::from(options.solution)).unwrap(),
             &mut feedback,
             &mut objective,
         )
-        .unwrap()
-    });
+        .unwrap();
 
     let scheduler = QueueScheduler::new();
     let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
@@ -232,18 +240,69 @@ pub fn fuzz() -> Result<(), Error> {
             });
         println!("Imported {} seeds from disk.", state.corpus().count());
         if state.corpus().count() == 0 {
-            state.corpus_mut().add(Testcase::new(BytesInput::new(Vec::new()))).unwrap();
+            state
+                .corpus_mut()
+                .add(Testcase::new(BytesInput::new(Vec::new())))
+                .unwrap();
         }
     }
 
     let mutator = StdScheduledMutator::new(havoc_mutations());
     let mut stages = tuple_list!(StdMutationalStage::new(mutator));
 
-    fuzzer
-        .fuzz_loop(&mut stages, &mut executor, &mut state, &mut mgr)
-        .expect("Error in the fuzzing loop!");
+    if let Some(n) = limit_loops {
+        for i in 0..n {
+            fuzzer
+                .fuzz_one(&mut stages, &mut executor, &mut state, &mut mgr)
+                .expect("Error in the fuzzing loop!");
+        }
+    } else {
+        fuzzer
+            .fuzz_loop(&mut stages, &mut executor, &mut state, &mut mgr)
+            .expect("Error in the fuzzing loop!");
+    }
     println!("Fuzzing done, exiting...");
 
     mgr.send_exiting()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    fn test_core(bin: &'static str) {
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
+        let file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("test_binaries")
+            .join(bin);
+
+        let options = FuzzerOptions {
+            output: temp_dir.path().join("output").to_string_lossy().to_string(),
+            input: temp_dir.path().join("input").to_string_lossy().to_string(),
+            solution: temp_dir.path().join("solution").to_string_lossy().to_string(),
+            bitmap: temp_dir.path().join("bitmap").to_string_lossy().to_string(),
+            events: temp_dir.path().join("events").to_string_lossy().to_string(),
+            timeout: 1,
+            port: 1337,
+            cores: Cores::from_cmdline("1").unwrap(),
+            verbose: false,
+            args: vec![file_path.to_string_lossy().to_string()],
+        };
+
+        fuzz(options, Some(100)).unwrap();
+    }
+
+    #[test]
+    #[cfg(feature = "libafl_qemu/aarch64")]
+    fn test_aarch64() {
+        test_core("test.aarch64-linux-musl")
+    }
+
+    #[test]
+    #[cfg(feature = "libafl_qemu/x86_64")]
+    fn test_x86_64() {
+        test_core("test.x86_64-linux-musl")
+    }
 }
