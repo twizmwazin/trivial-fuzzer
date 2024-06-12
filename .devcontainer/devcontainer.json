@@ -1,4 +1,9 @@
 {
-	"name": "Rust",
-	"image": "mcr.microsoft.com/devcontainers/rust:1-1-bookworm"
+	"name": "trivial-fuzzer",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": ".",
+		"args": {
+		}
+	}
 }
