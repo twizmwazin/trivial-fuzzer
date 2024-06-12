@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Pre-build image and run make ci-build in dev container
         uses: devcontainers/ci@v0.3
