@@ -26,7 +26,7 @@ jobs:
       - name: Install devcontainer cli
         run: npm install -g @devcontainers/cli
       - name: Build dev container
-        run: devcontainer build .
+        run: devcontainer --workspace-folder . build
       - name: Start dev container
         run: devcontainer --workspace-folder . up
       - name: Run cargo make all in dev container
