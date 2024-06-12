@@ -1,0 +1,9 @@
+{
+	"name": "trivial-fuzzer",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": ".",
+		"args": {
+		}
+	}
+}
