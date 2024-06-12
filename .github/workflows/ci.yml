@@ -24,7 +24,7 @@ jobs:
       #     push: always
       #     runCmd: cargo make all
       - name: Install devcontainer cli
-        run: npm install -g devcontainer-cli
+        run: npm install -g @devcontainers/cli
       - name: Build dev container
         run: devcontainer build .
       - name: Start dev container
