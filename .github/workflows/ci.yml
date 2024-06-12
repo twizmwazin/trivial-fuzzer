@@ -29,5 +29,7 @@ jobs:
         run: devcontainer --workspace-folder . build
       - name: Start dev container
         run: devcontainer --workspace-folder . up
+      - name: Debug output
+        run: devcontainer --workspace-folder . exec bash -c "whoami; ls -la /usr/local/cargo/registry/cache/index.crates.io-6f17d22bba15001f/; ls -la /usr/local/cargo/registry/*; ls -la /usr/local/cargo/*"
       - name: Run cargo make all in dev container
         run: devcontainer exec --workspace-folder . cargo make all
