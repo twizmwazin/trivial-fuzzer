@@ -14,7 +14,7 @@ jobs:
           - arch: x86_64
             image: ubuntu-22.04
           - arch: aarch64
-            image: ubicloud-standard-2-arm
+            image: ubicloud-standard-8-arm
           
 
     runs-on: ${{ matrix.runner.image }}
@@ -25,13 +25,15 @@ jobs:
           sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
           sudo apt-get update
           sudo apt-get -y install --no-install-recommends python3-venv ninja-build llvm-18 clang-18
-          rustup update
+          rustup toolchain install stable --profile minimal
           cargo install cargo-make
 
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - uses: Swatinem/rust-cache@v2
 
       - name: Build
         run: cargo make all
