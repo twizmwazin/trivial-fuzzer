@@ -21,5 +21,5 @@ jobs:
         with:
           imageName: ghcr.io/twizmwazin/trivial-fuzzer-devcontainer
           cacheFrom: ghcr.io/twizmwazin/trivial-fuzzer-devcontainer
-          push: always
+          push: never
           runCmd: cargo make all
