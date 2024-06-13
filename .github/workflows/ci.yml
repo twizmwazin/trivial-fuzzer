@@ -8,20 +8,18 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
     strategy:
       matrix:
         platform: [linux/x86_64, linux/arm64]
+        runner: [ubuntu-latest, ubicloud-standard-2-arm]
+
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Pre-build image and run make ci-build in dev container
         uses: devcontainers/ci@v0.3
@@ -30,4 +28,3 @@ jobs:
           cacheFrom: ghcr.io/twizmwazin/trivial-fuzzer-devcontainer
           push: never
           runCmd: cargo make all
-          platform: ${{ matrix.platform }}
