@@ -11,7 +11,3 @@ RUN export DEBIAN_FRONTEND=noninteractive  \
       ripgrep vim \
     && apt-get clean  \
     && rm -rf /var/lib/apt/lists/*
-
-USER vscode
-
-RUN cargo install cargo-make
