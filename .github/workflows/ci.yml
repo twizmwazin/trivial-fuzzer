@@ -36,8 +36,8 @@ jobs:
       - name: Debug output
         run: devcontainer exec --workspace-folder . ls -la /usr/local/cargo/registry/cache/index.crates.io-6f17d22bba15001f/
       - name: Debug output
-        run: devcontainer exec --workspace-folder . ls -la /usr/local/cargo/registry/*
+        run: devcontainer exec --workspace-folder . ls -la /usr/local/cargo/registry/
       - name: Debug output
-        run: devcontainer exec --workspace-folder . ls -la /usr/local/cargo/*
+        run: devcontainer exec --workspace-folder . ls -la /usr/local/cargo/
       - name: Run cargo make all in dev container
         run: devcontainer exec --workspace-folder . cargo make all
