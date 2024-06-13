@@ -10,7 +10,6 @@ jobs:
   build:
     strategy:
       matrix:
-        platform: [linux/x86_64, linux/arm64]
         runner: [ubuntu-latest, ubicloud-standard-2-arm]
 
     runs-on: ${{ matrix.runner }}
