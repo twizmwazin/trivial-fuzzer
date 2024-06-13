@@ -42,4 +42,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: artifact-${{ matrix.runner.arch }}
-          path: target/debug/trivial-fuzzer-*
+          path: |
+            target/debug/trivial-fuzzer-*
+            !target/debug/trivial-fuzzer-*.d
