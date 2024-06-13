@@ -16,18 +16,10 @@ jobs:
         with:
           submodules: recursive
 
-      # - name: Pre-build image and run make ci-build in dev container
-      #   uses: devcontainers/ci@v0.3
-      #   with:
-      #     imageName: ghcr.io/twizmwazin/trivial-fuzzer-devcontainer
-      #     cacheFrom: ghcr.io/twizmwazin/trivial-fuzzer-devcontainer
-      #     push: always
-      #     runCmd: cargo make all
-      - name: Install devcontainer cli
-        run: npm install -g @devcontainers/cli
-      - name: Build dev container
-        run: devcontainer --workspace-folder . build
-      - name: Start dev container
-        run: devcontainer --workspace-folder . up
-      - name: Run cargo make all in dev container
-        run: devcontainer exec --workspace-folder . cargo make all
+      - name: Pre-build image and run make ci-build in dev container
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/twizmwazin/trivial-fuzzer-devcontainer
+          cacheFrom: ghcr.io/twizmwazin/trivial-fuzzer-devcontainer
+          push: always
+          runCmd: cargo make all
