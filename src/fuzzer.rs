@@ -1,6 +1,6 @@
 use std::{
     env,
-    io::{self, stdout},
+    io::stdout,
     path::PathBuf,
     process,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -9,7 +9,7 @@ use std::{
 use clap::Parser;
 use libafl::{
     corpus::{Corpus, InMemoryOnDiskCorpus, Testcase},
-    events::{EventRestarter, SimpleEventManager, SimpleRestartingEventManager},
+    events::{EventRestarter, SimpleEventManager},
     executors::ExitKind,
     feedbacks::{CrashFeedback, MaxMapFeedback},
     fuzzer::StdFuzzer,
@@ -177,13 +177,13 @@ pub fn fuzz(mut options: FuzzerOptions, limit_loops: Option<u32>) -> Result<(), 
     let mut objective = CrashFeedback::new();
 
     let mut state = StdState::new(
-            StdRand::with_seed(current_nanos()),
-            InMemoryOnDiskCorpus::new(PathBuf::from(options.output)).unwrap(),
-            InMemoryOnDiskCorpus::new(PathBuf::from(options.solution)).unwrap(),
-            &mut feedback,
-            &mut objective,
-        )
-        .unwrap();
+        StdRand::with_seed(current_nanos()),
+        InMemoryOnDiskCorpus::new(PathBuf::from(options.output)).unwrap(),
+        InMemoryOnDiskCorpus::new(PathBuf::from(options.solution)).unwrap(),
+        &mut feedback,
+        &mut objective,
+    )
+    .unwrap();
 
     let scheduler = QueueScheduler::new();
     let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
@@ -251,7 +251,7 @@ pub fn fuzz(mut options: FuzzerOptions, limit_loops: Option<u32>) -> Result<(), 
     let mut stages = tuple_list!(StdMutationalStage::new(mutator));
 
     if let Some(n) = limit_loops {
-        for i in 0..n {
+        for _ in 0..n {
             fuzzer
                 .fuzz_one(&mut stages, &mut executor, &mut state, &mut mgr)
                 .expect("Error in the fuzzing loop!");
@@ -281,7 +281,11 @@ mod tests {
         let options = FuzzerOptions {
             output: temp_dir.path().join("output").to_string_lossy().to_string(),
             input: temp_dir.path().join("input").to_string_lossy().to_string(),
-            solution: temp_dir.path().join("solution").to_string_lossy().to_string(),
+            solution: temp_dir
+                .path()
+                .join("solution")
+                .to_string_lossy()
+                .to_string(),
             bitmap: temp_dir.path().join("bitmap").to_string_lossy().to_string(),
             events: temp_dir.path().join("events").to_string_lossy().to_string(),
             timeout: 1,
