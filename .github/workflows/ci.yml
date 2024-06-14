@@ -8,18 +8,40 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runner:
+          - arch: x86_64
+            image: ubuntu-22.04
+          - arch: aarch64
+            image: ubicloud-standard-4-arm
+          
+
+    runs-on: ${{ matrix.runner.image }}
 
     steps:
+      - name: Install dependenceies
+        run: |
+          sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+          sudo apt-get update
+          sudo apt-get -y install --no-install-recommends python3-venv ninja-build llvm-18 clang-18
+          rustup toolchain install stable --profile minimal
+          cargo install cargo-make
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Pre-build image and run make ci-build in dev container
-        uses: devcontainers/ci@v0.3
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo make all
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          imageName: ghcr.io/twizmwazin/trivial-fuzzer-devcontainer
-          cacheFrom: ghcr.io/twizmwazin/trivial-fuzzer-devcontainer
-          push: never
-          runCmd: cargo make all
+          name: artifact-${{ matrix.runner.arch }}
+          path: |
+            target/debug/trivial-fuzzer-*
+            !target/debug/trivial-fuzzer-*.d
