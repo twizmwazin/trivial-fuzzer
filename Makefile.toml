@@ -31,6 +31,12 @@ args = ["build", "--bin=trivial-fuzzer-ppc", "--features=libafl_qemu/ppc"]
 command = "cargo"
 args = ["build", "--bin=trivial-fuzzer-x86_64", "--features=libafl_qemu/x86_64"]
 
+[tasks.min]
+dependencies = [
+    "aarch64",
+    "x86_64"
+]
+
 [tasks.all]
 dependencies = [
     "aarch64",
@@ -88,7 +94,3 @@ dependencies = [
     "ppc-release",
     "x86_64-release"
 ]
-
-[tasks.test-aarch64]
-command = "cargo"
-args = ["test", "--features", "libafl_qemu/aarch64"]

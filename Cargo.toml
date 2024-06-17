@@ -20,42 +20,42 @@ tempfile = "3.10.1"
 
 [[bin]]
 name = "trivial-fuzzer-aarch64"
-path = "src/main.rs"
+path = "src/bin/aarch64.rs"
 required-features = ["libafl_qemu/aarch64"]
 
 [[bin]]
 name = "trivial-fuzzer-armeb"
-path = "src/main.rs"
+path = "src/bin/armeb.rs"
 required-features = ["libafl_qemu/arm", "libafl_qemu/be"]
 
 [[bin]]
 name = "trivial-fuzzer-arm"
-path = "src/main.rs"
+path = "src/bin/arm.rs"
 required-features = ["libafl_qemu/arm"]
 
 [[bin]]
 name = "trivial-fuzzer-i386"
-path = "src/main.rs"
+path = "src/bin/i386.rs"
 required-features = ["libafl_qemu/i386"]
 
 [[bin]]
 name = "trivial-fuzzer-mips"
-path = "src/main.rs"
+path = "src/bin/mips.rs"
 required-features = ["libafl_qemu/mips", "libafl_qemu/be"]
 
 [[bin]]
 name = "trivial-fuzzer-mipsel"
-path = "src/main.rs"
+path = "src/bin/mipsel.rs"
 required-features = ["libafl_qemu/mips"]
 
 [[bin]]
 name = "trivial-fuzzer-ppc"
-path = "src/main.rs"
+path = "src/bin/ppc.rs"
 required-features = ["libafl_qemu/ppc"]
 
 [[bin]]
 name = "trivial-fuzzer-x86_64"
-path = "src/main.rs"
+path = "src/bin/x86_64.rs"
 required-features = ["libafl_qemu/x86_64"]
 
 
