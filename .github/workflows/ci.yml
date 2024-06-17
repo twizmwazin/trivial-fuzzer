@@ -45,3 +45,6 @@ jobs:
           path: |
             target/debug/trivial-fuzzer-*
             !target/debug/trivial-fuzzer-*.d
+
+      - name: Run tests
+        run: cargo test min
