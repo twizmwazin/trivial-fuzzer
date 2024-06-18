@@ -1,0 +1,69 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        runner:
+          - arch: x86_64
+            image: ubuntu-22.04
+          - arch: aarch64
+            image: ubicloud-standard-4-arm
+          
+
+    runs-on: ${{ matrix.runner.image }}
+
+    steps:
+      - name: Install dependenceies
+        run: |
+          sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+          sudo apt-get update
+          sudo apt-get -y install --no-install-recommends python3-venv ninja-build llvm-18 clang-18
+          rustup toolchain install stable --profile minimal
+          cargo install cargo-make
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo make all
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-${{ matrix.runner.arch }}
+          path: |
+            target/debug/trivial-fuzzer-*
+            !target/debug/trivial-fuzzer-*.d
+
+  release:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@4
+
+      - name: Make upload directory
+        run: mkdir upload
+
+      - name: Run find
+        run: find .
+
+      - name: Copy artifacts to upload dir
+        run: |
+          for f in $(ls artifact-ubuntu-22.04); do
+            cp artifact-ubuntu-22.04/$f upload/$f.x86_64
+          for f in $(ls artifact-ubicloud-standard-4-arm); do
+            cp artifact-ubicloud-standard-4-arm/$f upload/$f.aarch64
+
+      - name: Run find
+        run: find .
