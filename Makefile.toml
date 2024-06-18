@@ -94,3 +94,24 @@ dependencies = [
     "ppc-release",
     "x86_64-release"
 ]
+
+# Tests
+[tasks.test-aarch64]
+command = "cargo"
+args = ["test", "--bin=trivial-fuzzer-aarch64", "--features=libafl_qemu/aarch64"]
+
+[tasks.test-x86_64]
+command = "cargo"
+args = ["test", "--bin=trivial-fuzzer-x86_64", "--features=libafl_qemu/x86_64"]
+
+[tasks.test-min]
+dependencies = [
+    "test-aarch64",
+    "test-x86_64"
+]
+
+[tasks.test-all]
+dependencies = [
+    "test-aarch64",
+    "test-x86_64"
+]

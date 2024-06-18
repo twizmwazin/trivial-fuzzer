@@ -90,7 +90,7 @@ fn create_directory_structure(options: &FuzzerOptions) {
     }
 }
 
-pub fn fuzz(mut options: FuzzerOptions, limit_loops: Option<u32>) -> Result<(), Error> {
+pub fn fuzz(mut options: FuzzerOptions, limit_loops: Option<u32>, log_stdout: bool) -> Result<(), Error> {
     create_directory_structure(&options);
 
     let corpus_dir = PathBuf::from(options.input);
@@ -157,9 +157,11 @@ pub fn fuzz(mut options: FuzzerOptions, limit_loops: Option<u32>) -> Result<(), 
         serde_json::to_writer(&file, event).unwrap();
         file.flush().unwrap();
 
-        serde_json::to_writer(stdout(), event).unwrap();
-        println!("");
-        stdout().flush().unwrap();
+        if log_stdout {
+            serde_json::to_writer(stdout(), event).unwrap();
+            stdout().write_all(b"\n").unwrap();
+            stdout().flush().unwrap();
+        }
 
         // Just shove the hitcount map out here
         let mut bitmap_file =
@@ -267,12 +269,11 @@ pub fn fuzz(mut options: FuzzerOptions, limit_loops: Option<u32>) -> Result<(), 
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use tempfile::tempdir;
 
-    fn test_core(bin: &'static str) {
+    pub fn test_core(bin: &'static str) {
         let temp_dir = tempdir().expect("Failed to create temporary directory");
         let file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("test_binaries")
@@ -295,18 +296,6 @@ mod tests {
             args: vec![file_path.to_string_lossy().to_string()],
         };
 
-        fuzz(options, Some(100)).unwrap();
-    }
-
-    #[test]
-    #[cfg(feature = "libafl_qemu/aarch64")]
-    fn test_aarch64() {
-        test_core("test.aarch64-linux-musl")
-    }
-
-    #[test]
-    #[cfg(feature = "libafl_qemu/x86_64")]
-    fn test_x86_64() {
-        test_core("test.x86_64-linux-musl")
+        fuzz(options, Some(100), false).unwrap();
     }
 }

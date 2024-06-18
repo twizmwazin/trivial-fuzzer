@@ -1,4 +1,4 @@
-mod fuzzer;
+pub mod fuzzer;
 mod json_monitor;
 
 use anyhow::Result;
@@ -12,7 +12,7 @@ pub fn entry() -> Result<()> {
     }
     env_logger::init();
 
-    fuzzer::fuzz(fuzzer::FuzzerOptions::try_parse()?, None).unwrap();
+    fuzzer::fuzz(fuzzer::FuzzerOptions::try_parse()?, None, true).unwrap();
 
     Ok(())
 }
