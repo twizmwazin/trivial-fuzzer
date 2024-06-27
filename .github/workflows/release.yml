@@ -61,11 +61,11 @@ jobs:
 
       - name: Copy artifacts to upload dir
         run: |
-          for f in $(ls artifact-ubuntu-22.04); do
-            cp artifact-ubuntu-22.04/$f upload/$f.x86_64
+          for f in $(ls artifact-x86_64); do
+            cp artifact-x86_64/$f upload/$f.x86_64
           done
-          for f in $(ls artifact-ubicloud-standard-4-arm); do
-            cp artifact-ubicloud-standard-4-arm/$f upload/$f.aarch64
+          for f in $(ls artifact-aarch64); do
+            cp artifact-aarch64/$f upload/$f.aarch64
           done
 
       - name: Run find
