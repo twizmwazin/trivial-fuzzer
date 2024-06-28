@@ -1,4 +1,4 @@
-name: Build
+name: Release
 
 on:
   push:
@@ -35,4 +35,6 @@ jobs:
             --title "Trivial Fuzzer ${{ github.ref_name }}"
             --generate-notes
             upload/*
+        env:
+          GH_TOKEN: ${{ github.token }}
 
