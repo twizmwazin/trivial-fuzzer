@@ -67,6 +67,14 @@ pub struct FuzzerOptions {
     #[arg(long, help = "Cpu cores to use", default_value = "all", value_parser = Cores::from_cmdline)]
     cores: Cores,
 
+    #[arg(
+        short = 'L',
+        long = "library-path",
+        help = "Path to load libraries from",
+        default_value = ""
+    )]
+    library_path: String,
+
     #[clap(short, long, help = "Enable output from the fuzzer clients")]
     verbose: bool,
 
@@ -115,6 +123,10 @@ pub fn fuzz(
 
     options.args.insert(0, program);
     log::debug!("ARGS: {:#?}", options.args);
+
+    if options.library_path != "" {
+        env::set_var("QEMU_LD_PREFIX", &options.library_path);
+    }
 
     env::remove_var("LD_LIBRARY_PATH");
     let env: Vec<(String, String)> = env::vars().collect();
@@ -297,6 +309,7 @@ pub mod tests {
             timeout: 1,
             port: 1337,
             cores: Cores::from_cmdline("1").unwrap(),
+            library_path: "".to_string(),
             verbose: false,
             args: vec![file_path.to_string_lossy().to_string()],
         };
