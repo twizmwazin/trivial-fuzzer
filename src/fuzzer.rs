@@ -75,6 +75,9 @@ pub struct FuzzerOptions {
     )]
     library_path: String,
 
+    #[arg(short = 'H', long, help = "Harness function to use", default_value = "LLVMFuzzerTestOneInput")]
+    harness: String,
+
     #[clap(short, long, help = "Enable output from the fuzzer clients")]
     verbose: bool,
 
@@ -131,17 +134,28 @@ pub fn fuzz(
     env::remove_var("LD_LIBRARY_PATH");
     let env: Vec<(String, String)> = env::vars().collect();
     let qemu = Qemu::init(&options.args, &env).unwrap();
-    println!("Base address: {:#x}", qemu.load_addr());
+    log::debug!("Base address: {:#x}", qemu.load_addr());
 
     let mut elf_buffer = Vec::new();
     let elf = EasyElf::from_file(qemu.binary_path(), &mut elf_buffer).unwrap();
 
-    let test_one_input_ptr = elf
-        .resolve_symbol("LLVMFuzzerTestOneInput", qemu.load_addr())
-        .expect("Symbol LLVMFuzzerTestOneInput not found");
-    log::debug!("LLVMFuzzerTestOneInput @ {test_one_input_ptr:#x}");
+    // If the harness function is an integer, we assume it's an address
+    // Otherwise, try to resolve it as a symbol
+    // TODO: Might need something special for thumb mode
+    let test_one_input_ptr = if let Ok(addr) = GuestAddr::from_str_radix(&options.harness, 16) {
+        if elf.is_pic() {
+            addr + qemu.load_addr()
+        } else {
+            addr
+        }
+    } else {
+        elf.resolve_symbol(&options.harness, qemu.load_addr())
+            .expect(format!("Symbol {} not found", &options.harness).as_str())
+    };
 
+    log::debug!("Pre-executing up to harness at {test_one_input_ptr:#x}");
     qemu.entry_break(test_one_input_ptr);
+    log::debug!("Pre-execution complete");
 
     let pc: GuestReg = qemu.read_reg(Regs::Pc).unwrap();
     log::debug!("Break at {pc:#x}");
@@ -310,6 +324,7 @@ pub mod tests {
             port: 1337,
             cores: Cores::from_cmdline("1").unwrap(),
             library_path: "".to_string(),
+            harness: "LLVMFuzzerTestOneInput".to_string(),
             verbose: false,
             args: vec![file_path.to_string_lossy().to_string()],
         };
