@@ -41,22 +41,31 @@ use std::io::Write;
 
 use crate::json_monitor::JsonMonitor;
 
+pub const MAX_INPUT_SIZE: usize = 1048576; // 1MB
+
 #[derive(Parser, Debug)]
 pub struct FuzzerOptions {
+    #[arg(
+        long,
+        help = "Base directory for fuzzer runtime data",
+        default_value = "fuzz_data"
+    )]
+    data_dir: PathBuf,
+
     #[arg(long, help = "Output directory")]
-    output: String,
+    output: Option<PathBuf>,
 
     #[arg(long, help = "Input directory")]
-    input: String,
+    input: Option<PathBuf>,
 
     #[arg(long, help = "Solution directory")]
-    solution: String,
+    solution: Option<PathBuf>,
 
     #[arg(long, help = "Bitmap path")]
-    bitmap: String,
+    bitmap: Option<PathBuf>,
 
     #[arg(long, help = "Events output directory")]
-    events: String,
+    events: Option<PathBuf>,
 
     #[arg(long, help = "Timeout in seconds", default_value_t = 1_u64)]
     timeout: u64,
@@ -71,11 +80,16 @@ pub struct FuzzerOptions {
         short = 'L',
         long = "library-path",
         help = "Path to load libraries from",
-        default_value = ""
+        default_value = "/"
     )]
     library_path: String,
 
-    #[arg(short = 'H', long, help = "Harness function to use", default_value = "LLVMFuzzerTestOneInput")]
+    #[arg(
+        short = 'H',
+        long,
+        help = "Harness function to use",
+        default_value = "LLVMFuzzerTestOneInput"
+    )]
     harness: String,
 
     #[clap(short, long, help = "Enable output from the fuzzer clients")]
@@ -85,7 +99,27 @@ pub struct FuzzerOptions {
     args: Vec<String>,
 }
 
-pub const MAX_INPUT_SIZE: usize = 1048576; // 1MB
+fn fix_args(args: &mut FuzzerOptions) {
+    if args.output.is_none() {
+        args.output = Some(args.data_dir.join("output"));
+    }
+
+    if args.input.is_none() {
+        args.input = Some(args.data_dir.join("input"));
+    }
+
+    if args.solution.is_none() {
+        args.solution = Some(args.data_dir.join("solution"));
+    }
+
+    if args.bitmap.is_none() {
+        args.bitmap = Some(args.data_dir.join("bitmap"));
+    }
+
+    if args.events.is_none() {
+        args.events = Some(args.data_dir.join("events"));
+    }
+}
 
 fn create_directory_structure(options: &FuzzerOptions) {
     let dirs = vec![
@@ -96,7 +130,8 @@ fn create_directory_structure(options: &FuzzerOptions) {
     ];
 
     for dir in dirs {
-        if !PathBuf::from(dir).exists() {
+        let dir = dir.clone().unwrap();
+        if !dir.exists() {
             std::fs::create_dir_all(dir).expect("Failed to create directory");
         }
     }
@@ -107,9 +142,10 @@ pub fn fuzz(
     limit_loops: Option<u32>,
     log_stdout: bool,
 ) -> Result<(), Error> {
+    fix_args(&mut options);
     create_directory_structure(&options);
 
-    let corpus_dir = PathBuf::from(options.input);
+    let corpus_dir = options.input.unwrap();
 
     let files = corpus_dir
         .read_dir()
@@ -182,7 +218,11 @@ pub fn fuzz(
 
     let json_monitor = JsonMonitor::new(|event| {
         let epoch_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        let filename = format!("{}/{}", options.events, epoch_time.as_nanos());
+        let filename = options
+            .events
+            .clone()
+            .unwrap()
+            .join(epoch_time.as_nanos().to_string());
 
         let mut file = File::create(filename).unwrap();
         serde_json::to_writer(&file, event).unwrap();
@@ -196,7 +236,7 @@ pub fn fuzz(
 
         // Just shove the hitcount map out here
         let mut bitmap_file =
-            File::create(PathBuf::from(&options.bitmap)).expect("Failed to create bitmap file");
+            File::create(options.bitmap.clone().unwrap()).expect("Failed to create bitmap file");
         bitmap_file
             .write_all(&edges_shmem_clone.as_slice())
             .expect("Failed to write bitmap data to file");
@@ -211,8 +251,8 @@ pub fn fuzz(
 
     let mut state = StdState::new(
         StdRand::with_seed(current_nanos()),
-        InMemoryOnDiskCorpus::new(PathBuf::from(options.output)).unwrap(),
-        InMemoryOnDiskCorpus::new(PathBuf::from(options.solution)).unwrap(),
+        InMemoryOnDiskCorpus::new(options.output.unwrap()).unwrap(),
+        InMemoryOnDiskCorpus::new(options.solution.unwrap()).unwrap(),
         &mut feedback,
         &mut objective,
     )
@@ -311,15 +351,12 @@ pub mod tests {
             .join(bin);
 
         let options = FuzzerOptions {
-            output: temp_dir.path().join("output").to_string_lossy().to_string(),
-            input: temp_dir.path().join("input").to_string_lossy().to_string(),
-            solution: temp_dir
-                .path()
-                .join("solution")
-                .to_string_lossy()
-                .to_string(),
-            bitmap: temp_dir.path().join("bitmap").to_string_lossy().to_string(),
-            events: temp_dir.path().join("events").to_string_lossy().to_string(),
+            data_dir: temp_dir.path().to_path_buf(),
+            output: None,
+            input: None,
+            solution: None,
+            bitmap: None,
+            events: None,
             timeout: 1,
             port: 1337,
             cores: Cores::from_cmdline("1").unwrap(),
