@@ -3,6 +3,7 @@ use std::{
     io::stdout,
     path::PathBuf,
     process,
+    ptr::addr_of_mut,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -14,8 +15,8 @@ use libafl::{
     feedbacks::{CrashFeedback, MaxMapFeedback},
     fuzzer::StdFuzzer,
     inputs::{BytesInput, HasTargetBytes},
-    mutators::scheduled::{havoc_mutations, StdScheduledMutator},
-    observers::StdMapObserver,
+    mutators::{havoc_mutations, scheduled::StdScheduledMutator},
+    observers::{CanTrack, HitcountsMapObserver, StdMapObserver, VariableMapObserver},
     schedulers::QueueScheduler,
     stages::mutational::StdMutationalStage,
     state::{HasCorpus, StdState},
@@ -24,17 +25,19 @@ use libafl::{
 use libafl_bolts::{
     core_affinity::Cores,
     current_nanos,
+    ownedref::OwnedMutSlice,
     rands::StdRand,
     shmem::{ShMemProvider, StdShMemProvider},
     tuples::tuple_list,
     AsSlice, AsSliceMut,
 };
 use libafl_qemu::{
-    command::NopCommandManager,
-    elf::EasyElf,
-    modules::edges::{EdgeCoverageChildModule, EDGES_MAP_PTR, EDGES_MAP_SIZE_IN_USE},
-    ArchExtras, CallingConvention, Emulator, GuestAddr, GuestReg, MmapPerms,
-    NopEmulatorExitHandler, Qemu, QemuForkExecutor, Regs,
+    elf::EasyElf, modules::StdEdgeCoverageModule, ArchExtras, CallingConvention, Emulator,
+    GuestAddr, GuestReg, MmapPerms, Qemu, QemuForkExecutor, Regs,
+};
+use libafl_targets::{
+    edges_map_mut_ptr, EDGES_MAP_ALLOCATED_SIZE, EDGES_MAP_DEFAULT_SIZE, EDGES_MAP_PTR,
+    MAX_EDGES_FOUND,
 };
 use std::fs::File;
 use std::io::Write;
@@ -168,8 +171,7 @@ pub fn fuzz(
     }
 
     env::remove_var("LD_LIBRARY_PATH");
-    let env: Vec<(String, String)> = env::vars().collect();
-    let qemu = Qemu::init(&options.args, &env).unwrap();
+    let qemu = Qemu::init(&options.args).unwrap();
     log::debug!("Base address: {:#x}", qemu.load_addr());
 
     let mut elf_buffer = Vec::new();
@@ -209,12 +211,19 @@ pub fn fuzz(
 
     let mut shmem_provider = StdShMemProvider::new().expect("Failed to init shared memory");
 
-    let mut edges_shmem = shmem_provider.new_shmem(EDGES_MAP_SIZE_IN_USE).unwrap();
+    let mut edges_shmem = shmem_provider.new_shmem(EDGES_MAP_DEFAULT_SIZE).unwrap();
     let edges_shmem_clone = edges_shmem.clone();
     let edges = edges_shmem.as_slice_mut();
     unsafe { EDGES_MAP_PTR = edges.as_mut_ptr() };
 
-    let edges_observer = unsafe { StdMapObserver::new("edges", edges) };
+    let mut edges_observer = unsafe {
+        HitcountsMapObserver::new(VariableMapObserver::from_mut_slice(
+            "edges",
+            OwnedMutSlice::from_raw_parts_mut(edges_map_mut_ptr(), EDGES_MAP_ALLOCATED_SIZE),
+            addr_of_mut!(MAX_EDGES_FOUND),
+        ))
+        .track_indices()
+    };
 
     let json_monitor = JsonMonitor::new(|event| {
         let epoch_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
@@ -261,7 +270,7 @@ pub fn fuzz(
     let scheduler = QueueScheduler::new();
     let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
 
-    let mut harness = |input: &BytesInput| {
+    let mut harness = |_: &mut Emulator<_, _, _, _, _>, input: &BytesInput| {
         let target = input.target_bytes();
         let mut buf = target.as_slice();
         let mut len = buf.len();
@@ -286,10 +295,15 @@ pub fn fuzz(
         ExitKind::Ok
     };
 
-    let modules = tuple_list!(EdgeCoverageChildModule::default(),);
+    let emulator_modules = tuple_list!(StdEdgeCoverageModule::builder()
+        .map_observer(edges_observer.as_mut())
+        .build()
+        .unwrap(),);
 
-    let emulator =
-        Emulator::new_with_qemu(qemu, modules, NopEmulatorExitHandler, NopCommandManager)?;
+    let emulator = Emulator::empty()
+        .qemu(qemu)
+        .modules(emulator_modules)
+        .build()?;
 
     let mut executor = QemuForkExecutor::new(
         emulator,

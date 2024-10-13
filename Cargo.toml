@@ -12,6 +12,7 @@ env_logger = "0.11.3"
 libafl = { path = "./LibAFL/libafl" }
 libafl_bolts = { path = "./LibAFL/libafl_bolts" }
 libafl_qemu = { path = "./LibAFL/libafl_qemu" }
+libafl_targets = { path = "./LibAFL/libafl_targets" }
 libc = "0.2.153"
 log = "0.4.20"
 serde = { version = "1.0.196", features = ["derive"] }
